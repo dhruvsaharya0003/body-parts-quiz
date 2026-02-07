@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>My Body Quiz</title>
+    <style>
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Comic Sans MS', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* ===== SCREENS ===== */
+        .screen { display: none; min-height: 100vh; padding: 20px; }
+        .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        /* ===== START SCREEN ===== */
+        #start-screen {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .start-title {
+            font-size: clamp(2.2rem, 9vw, 4.5rem);
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .start-subtitle {
+            font-size: clamp(1rem, 3.5vw, 1.5rem);
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .start-character {
+            width: clamp(120px, 35vw, 200px);
+            height: auto;
+            animation: bounce 1s infinite alternate;
+            margin: 15px 0;
+        }
+        .start-btn {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            padding: 20px 60px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        .start-btn:active { transform: scale(0.95); }
+
+        /* ===== QUIZ SCREEN ===== */
+        #quiz-screen {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            justify-content: flex-start;
+            padding-top: 10px;
+        }
+        .progress-bar-container {
+            width: 90%;
+            max-width: 500px;
+            height: 16px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            margin-bottom: 6px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #43e97b, #38f9d7);
+            border-radius: 8px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        .quiz-top-row {
+            display: flex;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 500px;
+            margin-bottom: 4px;
+        }
+        .question-counter {
+            font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+            color: #555;
+        }
+        .score-display {
+            font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .prompt-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .replay-btn {
+            font-size: clamp(2rem, 7vw, 3rem);
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50%;
+            width: clamp(60px, 16vw, 85px);
+            height: clamp(60px, 16vw, 85px);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+            transition: transform 0.2s;
+            color: white;
+        }
+        .replay-btn:active { transform: scale(0.9); }
+        .replay-hint {
+            font-size: clamp(0.7rem, 2vw, 0.9rem);
+            color: #999;
+            margin-top: 4px;
+        }
+
+        /* ===== CHARACTER CONTAINER ===== */
+        .character-container {
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            justify-content: center;
+            flex: 1;
+            align-items: center;
+            min-height: 0;
+        }
+        #body-svg {
+            width: clamp(220px, 55vw, 340px);
+            height: auto;
+            max-height: 58vh;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+        }
+        /* Hit region styling */
+        #hit-regions circle,
+        #hit-regions rect,
+        #hit-regions ellipse {
+            cursor: pointer;
+            stroke: transparent;
+            stroke-width: 0;
+            transition: stroke 0.3s, stroke-width 0.3s;
+        }
+        .hint-pulse {
+            animation: regionPulse 1.2s infinite !important;
+        }
+        @keyframes regionPulse {
+            0%, 100% { stroke: rgba(67, 233, 123, 0); stroke-width: 0; }
+            50% { stroke: rgba(67, 233, 123, 0.7); stroke-width: 5; }
+        }
+        .hit-correct {
+            animation: regionGlow 0.6s ease !important;
+        }
+        @keyframes regionGlow {
+            0% { stroke: #43e97b; stroke-width: 0; }
+            50% { stroke: #43e97b; stroke-width: 8; }
+            100% { stroke: #43e97b; stroke-width: 0; }
+        }
+        .hit-wrong {
+            animation: regionWrong 0.4s ease !important;
+        }
+        @keyframes regionWrong {
+            0% { stroke: #ff6b6b; stroke-width: 0; }
+            50% { stroke: #ff6b6b; stroke-width: 6; }
+            100% { stroke: #ff6b6b; stroke-width: 0; }
+        }
+        .svg-shake {
+            animation: shake 0.5s ease;
+        }
+
+        /* ===== CAMERA SCREEN ===== */
+        #camera-screen {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+        .camera-instruction {
+            font-size: clamp(1.3rem, 5vw, 2.2rem);
+            color: #333;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+        }
+        .camera-container {
+            position: relative;
+            width: clamp(250px, 75vw, 380px);
+            height: clamp(250px, 75vw, 380px);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            border: 5px solid white;
+        }
+        #camera-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        .countdown-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.25);
+            z-index: 10;
+        }
+        .countdown-overlay.show { display: flex; }
+        #countdown-number {
+            font-size: clamp(5rem, 22vw, 10rem);
+            color: white;
+            font-weight: bold;
+            text-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+            animation: countdownPop 0.8s ease;
+        }
+        @keyframes countdownPop {
+            0% { transform: scale(2.5); opacity: 0; }
+            40% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+        .capture-flash {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 15;
+            transition: opacity 0.15s;
+        }
+        .capture-flash.flash { opacity: 1; }
+        .camera-denied-msg {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #dfe6e9, #b2bec3);
+            color: #636e72;
+            font-size: clamp(1rem, 3vw, 1.4rem);
+            text-align: center;
+            padding: 20px;
+        }
+        .camera-denied-emoji {
+            font-size: clamp(3rem, 10vw, 5rem);
+            margin-bottom: 10px;
+        }
+        /* Analyzing overlay on camera */
+        .analyzing-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.4);
+            z-index: 12;
+            color: white;
+            text-align: center;
+        }
+        .analyzing-overlay.show { display: flex; }
+        .analyzing-spinner {
+            width: 50px; height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .analyzing-text {
+            font-size: clamp(1rem, 3.5vw, 1.4rem);
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        .retry-message {
+            font-size: clamp(1.1rem, 4vw, 1.6rem);
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+            margin-top: 10px;
+            text-align: center;
+        }
+        .model-loading-banner {
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: clamp(0.75rem, 2vw, 0.95rem);
+            margin-bottom: 10px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        .model-loading-banner.show { display: flex; }
+        .mini-spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* ===== PHOTO PREVIEW SCREEN ===== */
+        #photo-preview-screen {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .preview-label {
+            font-size: clamp(1.5rem, 6vw, 2.5rem);
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 15px;
+        }
+        .preview-photo {
+            width: clamp(200px, 55vw, 300px);
+            height: clamp(200px, 55vw, 300px);
+            object-fit: cover;
+            border-radius: 20px;
+            border: 6px solid white;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        /* ===== RESULT SCREEN ===== */
+        #result-screen {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            justify-content: flex-start;
+            padding-top: 25px;
+        }
+        .result-emoji {
+            font-size: clamp(3.5rem, 12vw, 6rem);
+            margin: 10px 0;
+        }
+        .result-score {
+            font-size: clamp(2rem, 7vw, 3.5rem);
+            color: #e74c3c;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .stars-container {
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            margin: 8px 0 15px;
+        }
+        .result-message {
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            color: #555;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        /* ===== PHOTO COLLAGE ===== */
+        .collage-title {
+            font-size: clamp(1rem, 3vw, 1.4rem);
+            color: #764ba2;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .photo-collage {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            width: 90%;
+            max-width: 450px;
+            margin-bottom: 15px;
+        }
+        .collage-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .collage-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .collage-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            font-size: clamp(0.5rem, 1.5vw, 0.7rem);
+            text-align: center;
+            padding: 2px;
+        }
+        .collage-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #dfe6e9;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+        }
+
+        /* ===== PLAY AGAIN & LEADERBOARD ===== */
+        .play-again-btn {
+            font-size: clamp(1.3rem, 4vw, 2rem);
+            padding: 18px 50px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            margin-bottom: 15px;
+        }
+        .play-again-btn:active { transform: scale(0.95); }
+        .leaderboard {
+            background: rgba(255,255,255,0.7);
+            border-radius: 20px;
+            padding: 12px 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 180px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .leaderboard h3 {
+            text-align: center;
+            color: #764ba2;
+            margin-bottom: 8px;
+            font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+        }
+        .leaderboard-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            font-size: clamp(0.75rem, 2vw, 0.9rem);
+            color: #555;
+        }
+        .leaderboard-entry:last-child { border-bottom: none; }
+
+        /* ===== FEEDBACK OVERLAY ===== */
+        .feedback-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .feedback-overlay.show { display: flex; }
+        .feedback-text {
+            font-size: clamp(4rem, 15vw, 8rem);
+            animation: feedbackPop 1s ease forwards;
+        }
+
+        /* ===== CONFETTI CANVAS ===== */
+        #confetti-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-15px); }
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 4px 25px rgba(102, 126, 234, 0.6); }
+        }
+        @keyframes correctPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+        @keyframes feedbackPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== START SCREEN ===== -->
+    <div id="start-screen" class="screen active">
+        <div class="start-title">My Body!</div>
+        <svg class="start-character" viewBox="0 0 300 450" xmlns="http://www.w3.org/2000/svg">
+            <!-- Mini version of the character for start screen -->
+            <ellipse cx="150" cy="410" rx="55" ry="8" fill="rgba(0,0,0,0.1)"/>
+            <rect x="120" y="210" width="60" height="90" rx="20" fill="#5B9BD5"/>
+            <circle cx="150" cy="160" r="55" fill="#FFDAB9"/>
+            <path d="M95 140 Q100 90 150 85 Q200 90 205 140" fill="#8B4513"/>
+            <circle cx="130" cy="155" r="7" fill="#333"/>
+            <circle cx="170" cy="155" r="7" fill="#333"/>
+            <ellipse cx="150" cy="175" rx="5" ry="4" fill="#E8967A"/>
+            <path d="M135 190 Q150 202 165 190" stroke="#E8967A" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <ellipse cx="95" cy="153" rx="12" ry="15" fill="#FFDAB9"/>
+            <ellipse cx="205" cy="153" rx="12" ry="15" fill="#FFDAB9"/>
+            <line x1="120" y1="250" x2="80" y2="290" stroke="#FFDAB9" stroke-width="18" stroke-linecap="round"/>
+            <line x1="180" y1="250" x2="220" y2="290" stroke="#FFDAB9" stroke-width="18" stroke-linecap="round"/>
+            <circle cx="72" cy="298" r="14" fill="#FFDAB9"/>
+            <circle cx="228" cy="298" r="14" fill="#FFDAB9"/>
+            <line x1="135" y1="300" x2="130" y2="370" stroke="#4A76A8" stroke-width="22" stroke-linecap="round"/>
+            <line x1="165" y1="300" x2="170" y2="370" stroke="#4A76A8" stroke-width="22" stroke-linecap="round"/>
+            <ellipse cx="126" cy="345" rx="5" ry="5" fill="#FFDAB9"/>
+            <ellipse cx="174" cy="345" rx="5" ry="5" fill="#FFDAB9"/>
+            <ellipse cx="125" cy="385" rx="18" ry="10" fill="#FF6B6B"/>
+            <ellipse cx="175" cy="385" rx="18" ry="10" fill="#FF6B6B"/>
+        </svg>
+        <div class="start-subtitle">Touch the body parts!</div>
+        <button class="start-btn" id="start-btn">&#9654; Play!</button>
+    </div>
+
+    <!-- ===== QUIZ SCREEN ===== -->
+    <div id="quiz-screen" class="screen">
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="quiz-top-row">
+            <div class="question-counter" id="question-counter"></div>
+            <div class="score-display" id="score-display">&#11088; 0</div>
+        </div>
+        <div class="prompt-area">
+            <button class="replay-btn" id="replay-btn" aria-label="Replay audio">&#128264;</button>
+            <div class="replay-hint">Tap to hear again!</div>
+        </div>
+        <div class="character-container">
+            <svg id="body-svg" viewBox="0 0 300 450" xmlns="http://www.w3.org/2000/svg">
+                <!-- Shadow -->
+                <ellipse cx="150" cy="430" rx="65" ry="10" fill="rgba(0,0,0,0.08)"/>
+
+                <!-- === VISIBLE CHARACTER === -->
+
+                <!-- Legs (pants) -->
+                <line x1="130" y1="300" x2="120" y2="380" stroke="#4A76A8" stroke-width="26" stroke-linecap="round"/>
+                <line x1="170" y1="300" x2="180" y2="380" stroke="#4A76A8" stroke-width="26" stroke-linecap="round"/>
+
+                <!-- Knee patches -->
+                <circle cx="126" cy="345" r="8" fill="#3D6490"/>
+                <circle cx="174" cy="345" r="8" fill="#3D6490"/>
+
+                <!-- Feet (shoes) -->
+                <ellipse cx="115" cy="400" rx="22" ry="14" fill="#FF6B6B"/>
+                <ellipse cx="185" cy="400" rx="22" ry="14" fill="#FF6B6B"/>
+                <ellipse cx="110" cy="395" rx="8" ry="5" fill="#FF8E8E"/>
+                <ellipse cx="180" cy="395" rx="8" ry="5" fill="#FF8E8E"/>
+
+                <!-- Body (shirt) -->
+                <rect x="110" y="210" width="80" height="100" rx="25" fill="#5B9BD5"/>
+                <!-- Shirt detail -->
+                <circle cx="150" cy="255" r="8" fill="#FFD93D"/>
+
+                <!-- Arms -->
+                <line x1="110" y1="230" x2="65" y2="280" stroke="#FFDAB9" stroke-width="20" stroke-linecap="round"/>
+                <line x1="190" y1="230" x2="235" y2="280" stroke="#FFDAB9" stroke-width="20" stroke-linecap="round"/>
+
+                <!-- Hands -->
+                <circle cx="57" cy="288" r="16" fill="#FFDAB9"/>
+                <circle cx="243" cy="288" r="16" fill="#FFDAB9"/>
+                <!-- Finger lines -->
+                <line x1="47" y1="280" x2="43" y2="273" stroke="#F0C8A0" stroke-width="2" stroke-linecap="round"/>
+                <line x1="52" y1="276" x2="48" y2="268" stroke="#F0C8A0" stroke-width="2" stroke-linecap="round"/>
+                <line x1="237" y1="276" x2="241" y2="268" stroke="#F0C8A0" stroke-width="2" stroke-linecap="round"/>
+                <line x1="248" y1="280" x2="252" y2="273" stroke="#F0C8A0" stroke-width="2" stroke-linecap="round"/>
+
+                <!-- Ears -->
+                <ellipse cx="88" cy="155" rx="14" ry="18" fill="#FFDAB9"/>
+                <ellipse cx="88" cy="155" rx="8" ry="12" fill="#F0C8A0"/>
+                <ellipse cx="212" cy="155" rx="14" ry="18" fill="#FFDAB9"/>
+                <ellipse cx="212" cy="155" rx="8" ry="12" fill="#F0C8A0"/>
+
+                <!-- Head -->
+                <circle cx="150" cy="150" r="60" fill="#FFDAB9"/>
+
+                <!-- Hair -->
+                <path d="M90 135 Q95 80 150 72 Q205 80 210 135 Q200 105 150 100 Q100 105 90 135Z" fill="#8B4513"/>
+                <!-- Hair tufts -->
+                <path d="M125 78 Q130 60 145 72" fill="#8B4513"/>
+                <path d="M160 75 Q170 58 178 78" fill="#8B4513"/>
+                <path d="M140 74 Q148 55 158 74" fill="#8B4513"/>
+
+                <!-- Eyes -->
+                <circle cx="130" cy="148" r="10" fill="white"/>
+                <circle cx="170" cy="148" r="10" fill="white"/>
+                <circle cx="132" cy="149" r="6" fill="#4A3728"/>
+                <circle cx="172" cy="149" r="6" fill="#4A3728"/>
+                <circle cx="134" cy="147" r="2.5" fill="white"/>
+                <circle cx="174" cy="147" r="2.5" fill="white"/>
+                <!-- Eyebrows -->
+                <path d="M120 136 Q130 131 140 135" stroke="#8B4513" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                <path d="M160 135 Q170 131 180 136" stroke="#8B4513" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+                <!-- Nose -->
+                <ellipse cx="150" cy="170" rx="6" ry="5" fill="#E8967A"/>
+
+                <!-- Mouth (smile) -->
+                <path d="M132 185 Q142 198 150 198 Q158 198 168 185" stroke="#D4735E" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+                <!-- Cheek blush -->
+                <ellipse cx="118" cy="175" rx="10" ry="6" fill="rgba(255,150,150,0.35)"/>
+                <ellipse cx="182" cy="175" rx="10" ry="6" fill="rgba(255,150,150,0.35)"/>
+
+                <!-- Tummy area marker (belly button on shirt) -->
+                <ellipse cx="150" cy="270" rx="4" ry="5" fill="#4A8CC7"/>
+
+                <!-- === HIT REGIONS (invisible, on top) === -->
+                <g id="hit-regions">
+                    <!-- Hair: rectangle across top of head -->
+                    <rect data-part="hair" x="90" y="60" width="120" height="55" rx="10" fill="transparent"/>
+
+                    <!-- Head: circle covering top/sides of head (not overlapping face features much) -->
+                    <circle data-part="head" cx="150" cy="120" r="35" fill="transparent"/>
+
+                    <!-- Eyes: rectangle across both eyes -->
+                    <rect data-part="eyes" x="115" y="133" width="70" height="28" rx="8" fill="transparent"/>
+
+                    <!-- Nose: circle at center of face -->
+                    <circle data-part="nose" cx="150" cy="170" r="18" fill="transparent"/>
+
+                    <!-- Mouth: rectangle below nose -->
+                    <rect data-part="mouth" x="120" y="180" width="60" height="28" rx="8" fill="transparent"/>
+
+                    <!-- Left ear -->
+                    <ellipse data-part="ears" cx="88" cy="155" rx="22" ry="26" fill="transparent"/>
+                    <!-- Right ear -->
+                    <ellipse data-part="ears" cx="212" cy="155" rx="22" ry="26" fill="transparent"/>
+
+                    <!-- Tummy: large ellipse over shirt/body -->
+                    <ellipse data-part="tummy" cx="150" cy="260" rx="45" ry="45" fill="transparent"/>
+
+                    <!-- Left hand -->
+                    <circle data-part="hands" cx="57" cy="288" r="24" fill="transparent"/>
+                    <!-- Right hand -->
+                    <circle data-part="hands" cx="243" cy="288" r="24" fill="transparent"/>
+
+                    <!-- Left knee -->
+                    <circle data-part="knees" cx="126" cy="345" r="22" fill="transparent"/>
+                    <!-- Right knee -->
+                    <circle data-part="knees" cx="174" cy="345" r="22" fill="transparent"/>
+
+                    <!-- Left foot -->
+                    <ellipse data-part="feet" cx="115" cy="400" rx="28" ry="22" fill="transparent"/>
+                    <!-- Right foot -->
+                    <ellipse data-part="feet" cx="185" cy="400" rx="28" ry="22" fill="transparent"/>
+                </g>
+            </svg>
+        </div>
+    </div>
+
+    <!-- ===== CAMERA SCREEN ===== -->
+    <div id="camera-screen" class="screen">
+        <div class="model-loading-banner" id="model-loading-banner">
+            <div class="mini-spinner"></div>
+            <span>Loading smart detection...</span>
+        </div>
+        <div class="camera-instruction" id="camera-instruction"></div>
+        <div class="camera-container" id="camera-container">
+            <video id="camera-video" autoplay playsinline muted></video>
+            <canvas id="camera-canvas" style="display:none;"></canvas>
+            <div class="countdown-overlay" id="countdown-overlay">
+                <span id="countdown-number">3</span>
+            </div>
+            <div class="analyzing-overlay" id="analyzing-overlay">
+                <div class="analyzing-spinner"></div>
+                <div class="analyzing-text">Looking...</div>
+            </div>
+            <div class="capture-flash" id="capture-flash"></div>
+        </div>
+        <div class="retry-message" id="retry-message"></div>
+    </div>
+
+    <!-- ===== PHOTO PREVIEW SCREEN ===== -->
+    <div id="photo-preview-screen" class="screen">
+        <div class="preview-label" id="preview-label"></div>
+        <img id="preview-photo" class="preview-photo" alt="Your photo"/>
+    </div>
+
+    <!-- ===== RESULT SCREEN ===== -->
+    <div id="result-screen" class="screen">
+        <div class="result-emoji" id="result-emoji"></div>
+        <div class="result-score" id="result-score"></div>
+        <div class="stars-container" id="stars-container"></div>
+        <div class="result-message" id="result-message"></div>
+        <div class="collage-title" id="collage-title"></div>
+        <div class="photo-collage" id="photo-collage"></div>
+        <button class="play-again-btn" id="play-again-btn">&#128260; Play Again!</button>
+        <div class="leaderboard" id="leaderboard"></div>
+    </div>
+
+    <!-- ===== FEEDBACK OVERLAY ===== -->
+    <div class="feedback-overlay" id="feedback-overlay">
+        <div class="feedback-text" id="feedback-text"></div>
+    </div>
+
+    <!-- ===== CONFETTI CANVAS ===== -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <script type="module">
+    /* ====================================================================
+       MY BODY QUIZ - A toddler-friendly body parts quiz with camera
+       + MediaPipe AI detection to verify the child shows the right body part
+       ==================================================================== */
+
+    import {
+        PoseLandmarker,
+        FaceLandmarker,
+        FilesetResolver
+    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs";
+
+    // ── Body Parts Data ──
+    const BODY_PARTS = [
+        { name: 'nose',   emoji: '👃', prompt: 'Where is the nose?',    showPrompt: 'Now show me YOUR nose!' },
+        { name: 'eyes',   emoji: '👀', prompt: 'Where are the eyes?',   showPrompt: 'Now show me YOUR eyes!' },
+        { name: 'mouth',  emoji: '👄', prompt: 'Where is the mouth?',   showPrompt: 'Now show me YOUR mouth!' },
+        { name: 'ears',   emoji: '👂', prompt: 'Where are the ears?',   showPrompt: 'Now show me YOUR ears!' },
+        { name: 'hands',  emoji: '🖐️', prompt: 'Where are the hands?',  showPrompt: 'Now show me YOUR hands!' },
+        { name: 'feet',   emoji: '🦶', prompt: 'Where are the feet?',   showPrompt: 'Now show me YOUR feet!' },
+        { name: 'tummy',  emoji: '😊', prompt: 'Where is the tummy?',   showPrompt: 'Now show me YOUR tummy!' },
+        { name: 'head',   emoji: '🧠', prompt: 'Where is the head?',    showPrompt: 'Now touch YOUR head!' },
+        { name: 'knees',  emoji: '🦵', prompt: 'Where are the knees?',  showPrompt: 'Now show me YOUR knees!' },
+        { name: 'hair',   emoji: '💇', prompt: 'Where is the hair?',    showPrompt: 'Now show me YOUR hair!' },
+    ];
+
+    const TOTAL_QUESTIONS = 10;
+    const MAX_CAMERA_ATTEMPTS = 2;
+
+    // ── State ──
+    let currentQuestion = 0;
+    let score = 0;
+    let questions = [];
+    let answered = false;
+    let firstTryWrong = false;
+    let photos = [];
+    let cameraStream = null;
+    let cameraAvailable = null;
+    let audioCtx = null;
+    let countdownInterval = null;
+    let cameraAttempts = 0;
+
+    // ── MediaPipe State ──
+    let poseLandmarker = null;
+    let faceLandmarker = null;
+    let mediapipeReady = false;
+    let mediapipeInitializing = false;
+
+    // ── MediaPipe Initialization ──
+    async function initMediaPipe() {
+        if (mediapipeReady || mediapipeInitializing) return;
+        mediapipeInitializing = true;
+
+        try {
+            const banner = document.getElementById('model-loading-banner');
+            banner.classList.add('show');
+
+            const vision = await FilesetResolver.forVisionTasks(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
+            );
+
+            // Load both models in parallel
+            const [pose, face] = await Promise.all([
+                PoseLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+                        delegate: "GPU"
+                    },
+                    runningMode: "IMAGE",
+                    numPoses: 1
+                }),
+                FaceLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                        delegate: "GPU"
+                    },
+                    runningMode: "IMAGE",
+                    numFaces: 1
+                })
+            ]);
+
+            poseLandmarker = pose;
+            faceLandmarker = face;
+            mediapipeReady = true;
+            banner.classList.remove('show');
+            console.log('MediaPipe models loaded successfully');
+        } catch (err) {
+            console.warn('MediaPipe init failed, detection will be skipped:', err);
+            mediapipeReady = false;
+            const banner = document.getElementById('model-loading-banner');
+            banner.classList.remove('show');
+        }
+        mediapipeInitializing = false;
+    }
+
+    // ── Body Part Detection Logic ──
+    // Pose landmark indices:
+    // 0=nose, 1-6=eyes, 7-8=ears, 9-10=mouth
+    // 11-12=shoulders, 13-14=elbows, 15-16=wrists, 17-22=hands
+    // 23-24=hips, 25-26=knees, 27-28=ankles, 29-32=feet
+
+    function analyzeBodyPart(canvas, targetPart) {
+        if (!mediapipeReady) return { detected: true }; // Skip detection if models not loaded
+
+        try {
+            const poseResult = poseLandmarker.detect(canvas);
+            const faceResult = faceLandmarker.detect(canvas);
+
+            const hasFace = faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0;
+            const hasPose = poseResult.landmarks && poseResult.landmarks.length > 0;
+            const pose = hasPose ? poseResult.landmarks[0] : null;
+
+            // Helper: check if a pose landmark is visible
+            const vis = (idx, threshold) => {
+                if (!pose || !pose[idx]) return false;
+                // Pose landmarks have visibility property in some versions,
+                // but normalized coords are always present if detected.
+                // A landmark at (0,0) or very far out usually means not detected.
+                const lm = pose[idx];
+                const v = lm.visibility !== undefined ? lm.visibility : 1;
+                return v > (threshold || 0.3) && lm.x > 0.02 && lm.x < 0.98 && lm.y > 0.02 && lm.y < 0.98;
+            };
+
+            // Helper: check if a hand (wrist) is near a certain y-level
+            const wristY = (side) => {
+                const idx = side === 'left' ? 15 : 16;
+                return (pose && pose[idx]) ? pose[idx].y : null;
+            };
+
+            const noseY = pose && pose[0] ? pose[0].y : null;
+
+            switch (targetPart) {
+                case 'nose':
+                    // Face visible = child is showing their face/nose area
+                    // Bonus: hand near nose (wrist y close to nose y)
+                    if (hasFace) return { detected: true };
+                    if (vis(0, 0.3)) return { detected: true };
+                    return { detected: false };
+
+                case 'eyes':
+                    // Face visible with eyes detectable
+                    if (hasFace) return { detected: true };
+                    if (vis(1, 0.2) || vis(4, 0.2)) return { detected: true };
+                    return { detected: false };
+
+                case 'mouth':
+                    // Face visible
+                    if (hasFace) return { detected: true };
+                    if (vis(9, 0.2) || vis(10, 0.2)) return { detected: true };
+                    return { detected: false };
+
+                case 'ears':
+                    // At least one ear detected (ears can be partially occluded)
+                    if (hasFace) return { detected: true };
+                    if (vis(7, 0.15) || vis(8, 0.15)) return { detected: true };
+                    return { detected: false };
+
+                case 'hair':
+                    // Face detected (hair is above face) and ideally hand above forehead
+                    if (hasFace) {
+                        // Check if either hand is above the nose (touching hair)
+                        const lWrist = wristY('left');
+                        const rWrist = wristY('right');
+                        if (noseY !== null) {
+                            if ((lWrist !== null && lWrist < noseY - 0.05) ||
+                                (rWrist !== null && rWrist < noseY - 0.05)) {
+                                return { detected: true };
+                            }
+                        }
+                        // Even just face visible is okay for hair (it's above the face)
+                        return { detected: true };
+                    }
+                    return { detected: false };
+
+                case 'head':
+                    // Face/head visible, ideally with hands touching head
+                    if (hasFace || vis(0, 0.3)) {
+                        // Check if either hand is near head level
+                        const lW = wristY('left');
+                        const rW = wristY('right');
+                        if (noseY !== null) {
+                            if ((lW !== null && Math.abs(lW - noseY) < 0.2) ||
+                                (rW !== null && Math.abs(rW - noseY) < 0.2)) {
+                                return { detected: true };
+                            }
+                        }
+                        // Just having head visible is acceptable
+                        return { detected: true };
+                    }
+                    return { detected: false };
+
+                case 'hands':
+                    // At least one wrist + hand landmarks visible
+                    if (vis(15, 0.3) || vis(16, 0.3)) return { detected: true };
+                    // Check finger landmarks too
+                    if (vis(17, 0.2) || vis(18, 0.2) || vis(19, 0.2) || vis(20, 0.2)) return { detected: true };
+                    return { detected: false };
+
+                case 'tummy':
+                    // Torso visible (shoulders + hips), ideally hand in torso region
+                    if (hasPose) {
+                        const torsoVisible = (vis(11, 0.2) || vis(12, 0.2)) && (vis(23, 0.15) || vis(24, 0.15));
+                        if (torsoVisible) {
+                            // Check if hand is in torso region
+                            const shoulderY = pose[11] ? pose[11].y : (pose[12] ? pose[12].y : null);
+                            const hipY = pose[23] ? pose[23].y : (pose[24] ? pose[24].y : null);
+                            const lW = wristY('left');
+                            const rW = wristY('right');
+                            if (shoulderY !== null && hipY !== null) {
+                                if ((lW !== null && lW > shoulderY && lW < hipY) ||
+                                    (rW !== null && rW > shoulderY && rW < hipY)) {
+                                    return { detected: true };
+                                }
+                            }
+                            // Torso visible is enough
+                            return { detected: true };
+                        }
+                    }
+                    return { detected: false };
+
+                case 'knees':
+                    // At least one knee landmark visible
+                    if (vis(25, 0.2) || vis(26, 0.2)) return { detected: true };
+                    return { detected: false };
+
+                case 'feet':
+                    // Ankle/foot landmarks visible
+                    if (vis(27, 0.2) || vis(28, 0.2) || vis(29, 0.15) || vis(30, 0.15) ||
+                        vis(31, 0.15) || vis(32, 0.15)) return { detected: true };
+                    return { detected: false };
+
+                default:
+                    return { detected: true };
+            }
+        } catch (err) {
+            console.warn('Detection error:', err);
+            return { detected: true }; // On error, accept gracefully
+        }
+    }
+
+    // ── Audio Context (lazy init) ──
+    function getAudioContext() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
+    }
+
+    // ── Oscillator Helper ──
+    function makeOsc(ctx, type, freq, startTime, duration, gainVal) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(gainVal, startTime + 0.02);
+        gain.gain.linearRampToValueAtTime(0, startTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+        return osc;
+    }
+
+    // ── Sound Effects ──
+    function playCorrectSound() {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        [523, 659, 784].forEach((freq, i) => {
+            makeOsc(ctx, 'sine', freq, now + i * 0.12, 0.25, 0.2);
+        });
+    }
+
+    function playWrongSound() {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        makeOsc(ctx, 'sine', 300, now, 0.3, 0.15);
+        makeOsc(ctx, 'sine', 250, now + 0.15, 0.3, 0.15);
+    }
+
+    function playVictorySound() {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        [523, 587, 659, 698, 784, 880, 988, 1047].forEach((freq, i) => {
+            makeOsc(ctx, 'sine', freq, now + i * 0.1, 0.3, 0.15);
+        });
+    }
+
+    function playShutterSound() {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        makeOsc(ctx, 'square', 1200, now, 0.04, 0.25);
+        makeOsc(ctx, 'square', 800, now + 0.04, 0.04, 0.15);
+    }
+
+    function playCountdownBeep() {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        makeOsc(ctx, 'sine', 880, now, 0.15, 0.15);
+    }
+
+    function playEncourageSound() {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        makeOsc(ctx, 'sine', 440, now, 0.2, 0.12);
+        makeOsc(ctx, 'sine', 523, now + 0.2, 0.2, 0.12);
+    }
+
+    // ── Speech Synthesis ──
+    let voicesLoaded = false;
+    let preferredVoice = null;
+
+    function loadVoices() {
+        const voices = speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            voicesLoaded = true;
+            preferredVoice =
+                voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('samantha')) ||
+                voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female')) ||
+                voices.find(v => v.lang.startsWith('en-US')) ||
+                voices.find(v => v.lang.startsWith('en')) ||
+                voices[0];
+        }
+    }
+
+    loadVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    function speak(text, onEnd) {
+        speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.85;
+        utterance.pitch = 1.15;
+        utterance.volume = 1.0;
+        if (preferredVoice) utterance.voice = preferredVoice;
+        if (onEnd) utterance.onend = onEnd;
+        setTimeout(() => speechSynthesis.speak(utterance), 50);
+    }
+
+    // ── Utility ──
+    function shuffleArray(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function showFeedback(emoji) {
+        const overlay = document.getElementById('feedback-overlay');
+        const text = document.getElementById('feedback-text');
+        text.textContent = emoji;
+        text.style.animation = 'none';
+        text.offsetHeight;
+        text.style.animation = '';
+        overlay.classList.add('show');
+        setTimeout(() => overlay.classList.remove('show'), 1000);
+    }
+
+    // ── Quiz Logic ──
+
+    function startQuiz() {
+        currentQuestion = 0;
+        score = 0;
+        photos = [];
+        firstTryWrong = false;
+        answered = false;
+        cameraAttempts = 0;
+        questions = shuffleArray([...BODY_PARTS]);
+
+        getAudioContext();
+
+        const warmUp = new SpeechSynthesisUtterance('');
+        warmUp.volume = 0;
+        speechSynthesis.speak(warmUp);
+
+        // Start loading MediaPipe models in background
+        initMediaPipe();
+
+        showScreen('quiz-screen');
+        showQuestion();
+    }
+
+    function showQuestion() {
+        answered = false;
+        firstTryWrong = false;
+        cameraAttempts = 0;
+        const q = questions[currentQuestion];
+
+        document.getElementById('progress-bar').style.width =
+            `${(currentQuestion / TOTAL_QUESTIONS) * 100}%`;
+        document.getElementById('question-counter').textContent =
+            `${currentQuestion + 1} / ${TOTAL_QUESTIONS}`;
+        document.getElementById('score-display').textContent = `⭐ ${score}`;
+
+        clearHitRegionStates();
+
+        document.querySelectorAll(`[data-part="${q.name}"]`).forEach(el => {
+            el.classList.add('hint-pulse');
+        });
+
+        setTimeout(() => speak(q.prompt), 300);
+    }
+
+    function clearHitRegionStates() {
+        document.querySelectorAll('#hit-regions > *').forEach(el => {
+            el.classList.remove('hint-pulse', 'hit-correct', 'hit-wrong');
+        });
+        document.getElementById('body-svg').classList.remove('svg-shake');
+    }
+
+    function handleBodyPartTap(tappedPart, element) {
+        if (answered) return;
+
+        const correctPart = questions[currentQuestion].name;
+
+        if (tappedPart === correctPart) {
+            answered = true;
+            if (!firstTryWrong) {
+                score++;
+                document.getElementById('score-display').textContent = `⭐ ${score}`;
+            }
+
+            clearHitRegionStates();
+            document.querySelectorAll(`[data-part="${correctPart}"]`).forEach(el => {
+                el.classList.add('hit-correct');
+            });
+
+            playCorrectSound();
+            showFeedback('🎉');
+
+            setTimeout(() => {
+                openCamera();
+            }, 1200);
+        } else {
+            firstTryWrong = true;
+            element.classList.add('hit-wrong');
+            const svg = document.getElementById('body-svg');
+            svg.classList.remove('svg-shake');
+            svg.offsetHeight;
+            svg.classList.add('svg-shake');
+            playWrongSound();
+            showFeedback('🤔');
+
+            setTimeout(() => {
+                element.classList.remove('hit-wrong');
+            }, 500);
+        }
+    }
+
+    function replayAudio() {
+        if (questions[currentQuestion]) {
+            speak(questions[currentQuestion].prompt);
+        }
+    }
+
+    // ── Camera Integration ──
+
+    async function initCamera() {
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+                audio: false
+            });
+            const video = document.getElementById('camera-video');
+            video.srcObject = cameraStream;
+            await new Promise((resolve) => {
+                video.onloadedmetadata = () => {
+                    video.play().then(resolve).catch(resolve);
+                };
+            });
+            cameraAvailable = true;
+            return true;
+        } catch (err) {
+            console.warn('Camera not available:', err);
+            cameraAvailable = false;
+            return false;
+        }
+    }
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        const video = document.getElementById('camera-video');
+        video.srcObject = null;
+    }
+
+    function openCamera() {
+        if (cameraAvailable === false) {
+            skipCameraAndProceed();
+            return;
+        }
+
+        showScreen('camera-screen');
+        const q = questions[currentQuestion];
+        document.getElementById('camera-instruction').textContent = q.showPrompt;
+        document.getElementById('countdown-overlay').classList.remove('show');
+        document.getElementById('analyzing-overlay').classList.remove('show');
+        document.getElementById('retry-message').textContent = '';
+
+        // Show loading banner if models still loading
+        const banner = document.getElementById('model-loading-banner');
+        if (mediapipeInitializing && !mediapipeReady) {
+            banner.classList.add('show');
+        }
+
+        if (!cameraStream) {
+            const container = document.getElementById('camera-container');
+            const video = document.getElementById('camera-video');
+            video.style.display = 'none';
+
+            const existingMsg = container.querySelector('.camera-denied-msg');
+            if (existingMsg) existingMsg.remove();
+
+            initCamera().then(success => {
+                if (success) {
+                    video.style.display = '';
+                    speak(q.showPrompt, () => {
+                        setTimeout(() => startCountdown(), 300);
+                    });
+                } else {
+                    showCameraDenied();
+                    setTimeout(() => skipCameraAndProceed(), 2000);
+                }
+            });
+        } else {
+            const video = document.getElementById('camera-video');
+            video.style.display = '';
+            if (video.paused) video.play();
+            speak(q.showPrompt, () => {
+                setTimeout(() => startCountdown(), 300);
+            });
+        }
+    }
+
+    function showCameraDenied() {
+        const container = document.getElementById('camera-container');
+        const existing = container.querySelector('.camera-denied-msg');
+        if (existing) existing.remove();
+
+        const msg = document.createElement('div');
+        msg.className = 'camera-denied-msg';
+        msg.innerHTML = '<div class="camera-denied-emoji">📷</div><div>Camera not available</div><div>That\'s okay!</div>';
+        container.appendChild(msg);
+    }
+
+    function startCountdown() {
+        const overlay = document.getElementById('countdown-overlay');
+        const numEl = document.getElementById('countdown-number');
+        overlay.classList.add('show');
+
+        let count = 3;
+        numEl.textContent = count;
+        playCountdownBeep();
+
+        numEl.style.animation = 'none';
+        numEl.offsetHeight;
+        numEl.style.animation = '';
+
+        countdownInterval = setInterval(() => {
+            count--;
+            if (count > 0) {
+                numEl.textContent = count;
+                numEl.style.animation = 'none';
+                numEl.offsetHeight;
+                numEl.style.animation = '';
+                playCountdownBeep();
+            } else if (count === 0) {
+                overlay.classList.remove('show');
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+                captureAndAnalyze();
+            }
+        }, 1000);
+    }
+
+    function captureAndAnalyze() {
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('camera-canvas');
+
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 640;
+
+        const ctx = canvas.getContext('2d');
+        // Mirror to match display
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        // Flash effect
+        const flash = document.getElementById('capture-flash');
+        flash.classList.add('flash');
+        playShutterSound();
+        setTimeout(() => flash.classList.remove('flash'), 200);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        const targetPart = questions[currentQuestion].name;
+
+        // Show analyzing overlay
+        const analyzingOverlay = document.getElementById('analyzing-overlay');
+        analyzingOverlay.classList.add('show');
+
+        // Small delay to let the UI update, then run detection
+        setTimeout(() => {
+            // Create an unmirrored canvas for detection (MediaPipe expects normal orientation)
+            // Actually, the canvas already has the mirrored image drawn, which is fine for detection
+            const result = analyzeBodyPart(canvas, targetPart);
+            analyzingOverlay.classList.remove('show');
+
+            if (result.detected) {
+                // Body part detected! Celebrate and proceed
+                photos.push({ bodyPart: targetPart, dataUrl: dataUrl });
+                speak('Yes! Great job!');
+                playCorrectSound();
+                showFeedback('🎉');
+                setTimeout(() => showPhotoPreview(dataUrl), 800);
+            } else {
+                // Not detected — retry or accept
+                cameraAttempts++;
+                if (cameraAttempts >= MAX_CAMERA_ATTEMPTS) {
+                    // Accept gracefully after max attempts
+                    photos.push({ bodyPart: targetPart, dataUrl: dataUrl });
+                    speak('Great job!');
+                    playCorrectSound();
+                    showFeedback('🌟');
+                    setTimeout(() => showPhotoPreview(dataUrl), 800);
+                } else {
+                    // Encourage retry
+                    playEncourageSound();
+                    const retryMsg = document.getElementById('retry-message');
+                    retryMsg.textContent = `Try again! Show me your ${targetPart}! 😊`;
+                    speak(`Try again! Show me your ${targetPart}!`, () => {
+                        retryMsg.textContent = '';
+                        setTimeout(() => startCountdown(), 500);
+                    });
+                }
+            }
+        }, 100);
+    }
+
+    function skipCameraAndProceed() {
+        photos.push({
+            bodyPart: questions[currentQuestion].name,
+            dataUrl: null
+        });
+        showScreen('photo-preview-screen');
+        document.getElementById('preview-label').textContent = 'Great job! 🌟';
+        document.getElementById('preview-photo').style.display = 'none';
+        launchConfetti(60);
+        setTimeout(() => nextQuestion(), 1800);
+    }
+
+    function showPhotoPreview(dataUrl) {
+        showScreen('photo-preview-screen');
+        const img = document.getElementById('preview-photo');
+        img.style.display = 'block';
+        img.src = dataUrl;
+        document.getElementById('preview-label').textContent = 'Great job! 🎉';
+        launchConfetti(60);
+        setTimeout(() => nextQuestion(), 2200);
+    }
+
+    function nextQuestion() {
+        currentQuestion++;
+        if (currentQuestion < TOTAL_QUESTIONS) {
+            showScreen('quiz-screen');
+            showQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    // ── Results & Leaderboard ──
+
+    function showResults() {
+        stopCamera();
+
+        showScreen('result-screen');
+
+        setTimeout(() => speak('Great job! You did it!'), 500);
+
+        const entries = JSON.parse(localStorage.getItem('bodyPartsQuizLeaderboard') || '[]');
+        entries.unshift({ score, date: new Date().toLocaleString() });
+        if (entries.length > 20) entries.length = 20;
+        localStorage.setItem('bodyPartsQuizLeaderboard', JSON.stringify(entries));
+
+        document.getElementById('result-score').textContent = `${score} / ${TOTAL_QUESTIONS}`;
+
+        const starCount = Math.ceil(score / 2);
+        document.getElementById('stars-container').textContent = '⭐'.repeat(starCount) || '💪';
+
+        let emoji, message;
+        if (score === 10) {
+            emoji = '🏆'; message = 'Perfect! Amazing!';
+        } else if (score >= 7) {
+            emoji = '🌟'; message = 'Wonderful job!';
+        } else if (score >= 4) {
+            emoji = '😊'; message = 'Good try!';
+        } else {
+            emoji = '💪'; message = 'Keep practicing!';
+        }
+        document.getElementById('result-emoji').textContent = emoji;
+        document.getElementById('result-message').textContent = message;
+
+        renderPhotoCollage();
+
+        const lb = document.getElementById('leaderboard');
+        lb.innerHTML = '<h3>🏅 Previous Games</h3>';
+        entries.forEach(entry => {
+            const row = document.createElement('div');
+            row.className = 'leaderboard-entry';
+            row.innerHTML = `<span>⭐ ${entry.score}/${TOTAL_QUESTIONS}</span><span>${entry.date}</span>`;
+            lb.appendChild(row);
+        });
+
+        if (score >= 3) {
+            playVictorySound();
+            launchConfetti(150);
+        }
+    }
+
+    function renderPhotoCollage() {
+        const hasPhotos = photos.some(p => p.dataUrl);
+        const titleEl = document.getElementById('collage-title');
+        const container = document.getElementById('photo-collage');
+        container.innerHTML = '';
+
+        if (!hasPhotos) {
+            titleEl.textContent = '';
+            return;
+        }
+
+        titleEl.textContent = '📸 Your Photos';
+
+        photos.forEach(photo => {
+            const item = document.createElement('div');
+            item.className = 'collage-item';
+
+            if (photo.dataUrl) {
+                const img = document.createElement('img');
+                img.src = photo.dataUrl;
+                img.className = 'collage-photo';
+                img.alt = photo.bodyPart;
+                item.appendChild(img);
+            } else {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'collage-placeholder';
+                placeholder.textContent = '📷';
+                item.appendChild(placeholder);
+            }
+
+            const label = document.createElement('div');
+            label.className = 'collage-label';
+            label.textContent = photo.bodyPart;
+            item.appendChild(label);
+
+            container.appendChild(item);
+        });
+    }
+
+    // ── Confetti ──
+    function launchConfetti(count) {
+        const particleCount = count || 150;
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx2d = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const particles = [];
+        const colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd', '#01a3a4', '#f368e0'];
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height,
+                w: Math.random() * 10 + 5,
+                h: Math.random() * 6 + 3,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vy: Math.random() * 3 + 2,
+                vx: (Math.random() - 0.5) * 2,
+                rotation: Math.random() * 360,
+                rotSpeed: (Math.random() - 0.5) * 10,
+            });
+        }
+
+        let frame = 0;
+        function animate() {
+            ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.y += p.vy;
+                p.x += p.vx;
+                p.rotation += p.rotSpeed;
+                ctx2d.save();
+                ctx2d.translate(p.x, p.y);
+                ctx2d.rotate((p.rotation * Math.PI) / 180);
+                ctx2d.fillStyle = p.color;
+                ctx2d.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                ctx2d.restore();
+            });
+            frame++;
+            if (frame < 180) {
+                requestAnimationFrame(animate);
+            } else {
+                ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        animate();
+    }
+
+    // ── Event Listeners ──
+
+    document.getElementById('start-btn').addEventListener('click', startQuiz);
+    document.getElementById('start-btn').addEventListener('touchend', function(e) {
+        e.preventDefault();
+        startQuiz();
+    });
+
+    document.getElementById('replay-btn').addEventListener('click', replayAudio);
+    document.getElementById('replay-btn').addEventListener('touchend', function(e) {
+        e.preventDefault();
+        replayAudio();
+    });
+
+    document.getElementById('play-again-btn').addEventListener('click', startQuiz);
+    document.getElementById('play-again-btn').addEventListener('touchend', function(e) {
+        e.preventDefault();
+        startQuiz();
+    });
+
+    function setupHitRegions() {
+        document.querySelectorAll('#hit-regions > *').forEach(region => {
+            region.addEventListener('click', function(e) {
+                e.stopPropagation();
+                handleBodyPartTap(this.dataset.part, this);
+            });
+            region.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                handleBodyPartTap(this.dataset.part, this);
+            });
+        });
+    }
+    setupHitRegions();
+
+    window.addEventListener('resize', () => {
+        const canvas = document.getElementById('confetti-canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+
+    window.addEventListener('beforeunload', () => {
+        stopCamera();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    });
+    </script>
+</body>
+</html>
